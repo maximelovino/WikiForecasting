@@ -1,4 +1,6 @@
+absl-py==0.7.1
 appnope==0.1.0
+astor==0.8.0
 attrs==19.1.0
 backcall==0.1.0
 bleach==3.1.0
@@ -20,6 +22,9 @@ ephem==3.7.6.0
 fastdtw==0.3.2
 fbprophet==0.4.post2
 future==0.17.1
+gast==0.2.2
+grpcio==1.21.1
+h5py==2.9.0
 HeapDict==1.0.0
 holidays==0.9.10
 idna==2.8
@@ -35,12 +40,17 @@ jupyter==1.0.0
 jupyter-client==5.2.4
 jupyter-console==6.0.0
 jupyter-core==4.4.0
+Keras==2.2.4
+Keras-Applications==1.0.8
+Keras-Preprocessing==1.1.0
 kiwisolver==1.1.0
 lightgbm==2.2.3
 lunardate==0.2.0
+Markdown==3.1.1
 MarkupSafe==1.1.1
 matplotlib==3.0.3
 mistune==0.8.4
+mock==3.0.5
 msgpack==0.6.1
 nbconvert==5.5.0
 nbformat==4.4.0
@@ -54,6 +64,7 @@ pexpect==4.7.0
 pickleshare==0.7.5
 prometheus-client==0.6.0
 prompt-toolkit==2.0.9
+protobuf==3.8.0
 psutil==5.6.3
 ptyprocess==0.6.0
 Pygments==2.4.0
@@ -76,6 +87,10 @@ sklearn==0.0
 sortedcontainers==2.1.0
 statsmodels==0.9.0
 tblib==1.4.0
+tensorboard==1.13.1
+tensorflow==1.13.1
+tensorflow-estimator==1.13.0
+termcolor==1.1.0
 terminado==0.8.2
 testpath==0.4.2
 toolz==0.9.0
@@ -86,5 +101,6 @@ tsfresh==0.11.2
 urllib3==1.25.3
 wcwidth==0.1.7
 webencodings==0.5.1
+Werkzeug==0.15.4
 widgetsnbextension==3.4.2
 zict==0.1.4
