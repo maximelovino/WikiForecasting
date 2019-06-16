@@ -1,69 +1,32 @@
 import numpy as np
 import pandas as pd
 from datetime import timedelta
+import re
+from sklearn.preprocessing import OrdinalEncoder
 
 
 class WikiSeries:
     def __init__(self, pickle_path) -> None:
         super().__init__()
-
         self.df = pd.read_pickle(pickle_path)
-        self.separate_meta()
-        self.data_start_date = self.df.columns[0]
-        self.data_end_date = self.df.columns[-1]
-        print('Data ranges from %s to %s' % (self.data_start_date, self.data_end_date))
-        self.date_to_index = pd.Series(index=pd.Index([pd.to_datetime(c) for c in self.df.columns[0:]]),
-                                       data=[i for i in range(len(self.df.columns[0:]))])
-        self.series_array = self.df.values
-
-    def separate_meta(self):
-        self.meta = self.df.iloc[:, :4]
-        self.df = self.df.iloc[:, 4:]
+        self.data_start_date = None
+        self.data_end_date = None
 
     def get_time_block_series(self, start_date, end_date):
-        inds = self.date_to_index[start_date:end_date]
-        return self.series_array[:, inds]
-
-    def transform_series_encode(self, series):
-        series_array = np.log1p(series)
-        self.encode_series_mean = series_array.mean(axis=1).reshape(-1, 1)
-        series_array = series_array - self.encode_series_mean
-        series_array = series_array.reshape((series_array.shape[0], series_array.shape[1], 1))
-
-        return series_array
-
-    def transform_series_decode(self, series):
-        series_array = np.log1p(series)
-        series_array = series_array - self.encode_series_mean
-        series_array = series_array.reshape((series_array.shape[0], series_array.shape[1], 1))
-
-        return series_array
+        pass
 
     def training_series(self):
-        encoder_input_data = self.get_time_block_series(self.train_enc_start, self.train_enc_end)
-        encoder_input_data = self.transform_series_encode(encoder_input_data)
-
-        decoder_target_data = self.get_time_block_series(self.train_pred_start, self.train_pred_end)
-        decoder_target_data = self.transform_series_decode(decoder_target_data)
-
-        return encoder_input_data, decoder_target_data
+        pass
 
     def validation_series(self):
-        encoder_input_data = self.get_time_block_series(self.val_enc_start, self.val_enc_end)
-        encoder_input_data = self.transform_series_encode(encoder_input_data)
+        pass
 
-        decoder_target_data = self.get_time_block_series(self.val_pred_start, self.val_pred_end)
-        decoder_target_data = self.transform_series_decode(decoder_target_data)
-
-        return encoder_input_data, decoder_target_data
-
+    # TODO should be able to get any sample, transformed correctly, not only validation
     def get_validation_sample(self, sample_ind):
-        return self.validation_encoder[sample_ind:sample_ind + 1, :, :], self.validation_decoder[sample_ind, :, :1].reshape(-1, 1)
+        pass
 
     def denormalize_series(self, series, sample_ind):
-        new_series = series + self.encode_series_mean[sample_ind, 0]
-        new_series = np.expm1(new_series)
-        return new_series
+        pass
 
     def prepare_dates(self, pred_steps):
         self.pred_length = timedelta(pred_steps)
@@ -92,6 +55,29 @@ class WikiSeries:
 
         print('\nEncoding interval:', self.enc_length.days)
         print('Prediction interval:', self.pred_length.days)
+        self.prepare_series()
 
-        self.training_encoder, self.training_decoder = self.training_series()
-        self.validation_encoder, self.validation_decoder = self.training_series()
+    def prepare_series(self):
+        pass
+
+    @staticmethod
+    def preprocess_csv_to_pickle(input_path, output_path):
+        def extract_meta(page):
+            parts = page.split("_")
+            [project, access, agent] = parts[-3:]
+            name = " ".join(parts[0:-3])
+            match_lang = re.search("([a-z][a-z])\.wikipedia\.org", project)
+            lang = match_lang.group(1) if match_lang else 'na'
+            return [name, lang, access, agent]
+
+        original_dataset = pd.read_csv(input_path)
+        print("Before cleaning:")
+        original_dataset.info()
+        original_dataset.dropna(axis='index', inplace=True)
+        original_dataset.reset_index(inplace=True, drop=True)
+        print("After cleaning:")
+        original_dataset.info()
+        meta_dataset = original_dataset.copy()
+        meta_dataset['name'], meta_dataset['lang'], meta_dataset['access'], meta_dataset['agent'] = zip(*meta_dataset['Page'].apply(extract_meta))
+        meta_dataset = meta_dataset[['name', 'lang', 'access', 'agent'] + [c for c in meta_dataset if c not in ['Page', 'name', 'lang', 'access', 'agent']]]
+        meta_dataset.to_pickle(output_path)

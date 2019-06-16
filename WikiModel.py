@@ -4,12 +4,13 @@ from matplotlib import pyplot as plt
 
 class WikiModel:
 
-    def __init__(self, series: WikiSeries, pred_steps):
+    def __init__(self, series: WikiSeries, pred_steps, summary=True):
         self.series = series
         self.pred_steps = pred_steps
         series.prepare_dates(pred_steps)
         self.build_model()
-        self.model.summary()
+        if summary:
+            self.model.summary()
 
     def fit(self, epochs=10):
         pass
