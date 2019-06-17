@@ -59,7 +59,7 @@ class WikiSeriesNN(WikiSeries):
 
         return encoder_input_data, decoder_target_data
 
-    # TODO should be able to get any sample, transformed correctly, not only validation
+    # TODO should be able to get any sample, transformed correctly, not only validation directly from df, given start history, start target and end target dates
     def get_validation_sample(self, sample_ind):
         return self.validation_encoder[sample_ind:sample_ind + 1, :, :], self.validation_decoder[sample_ind, :, :1].reshape(-1, 1)
 

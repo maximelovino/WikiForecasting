@@ -80,4 +80,8 @@ class WikiSeries:
         meta_dataset = original_dataset.copy()
         meta_dataset['name'], meta_dataset['lang'], meta_dataset['access'], meta_dataset['agent'] = zip(*meta_dataset['Page'].apply(extract_meta))
         meta_dataset = meta_dataset[['name', 'lang', 'access', 'agent'] + [c for c in meta_dataset if c not in ['Page', 'name', 'lang', 'access', 'agent']]]
+        meta_dataset = meta_dataset[meta_dataset['lang'] != 'na']
+        meta_dataset.reset_index(inplace=True, drop=True)
+        print("After removing NA langs:")
+        meta_dataset.info()
         meta_dataset.to_pickle(output_path)
