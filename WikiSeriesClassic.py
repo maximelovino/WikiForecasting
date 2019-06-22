@@ -28,9 +28,9 @@ class WikiSeriesClassic(WikiSeries):
             self.extract_lag_features()
 
         # TODO do dates after lag which will cut two days, new dates should start on '2015-07-03'
-        # self.data_start_date = self.df.columns[]
-        # self.data_end_date = self.df.columns[-1]
-        # print('Data ranges from %s to %s' % (self.data_start_date, self.data_end_date))
+        self.data_start_date = self.df['date'].min()
+        self.data_end_date = self.df['date'].max()
+        print('Data ranges from %s to %s' % (self.data_start_date, self.data_end_date))
 
         # self.date_to_index = pd.Series(index=pd.Index([pd.to_datetime(c) for c in self.df.columns[self.fixed_columns:]]),data=[i for i in range(len(self.df.columns[self.fixed_columns:]))])
         # self.date_to_index = self.date_to_index + self.fixed_columns
@@ -38,7 +38,7 @@ class WikiSeriesClassic(WikiSeries):
     def extract_lag_features(self):
         self.df['last_hits'] = self.df.groupby(['name', 'lang', 'access', 'agent'])['hits'].shift()
         self.df['last_diff'] = self.df.groupby(['name', 'lang', 'access', 'agent'])['last_hits'].diff()
-        self.df.dropna(inplace=True,)
+        self.df.dropna(inplace=True, )
 
     def extract_date_features(self):
         self.df['day_of_week'] = self.df['date'].dt.dayofweek
@@ -65,9 +65,12 @@ class WikiSeriesClassic(WikiSeries):
         with open(path_encoder, "wb") as f:
             pickle.dump(self.ordinal_encoder, f)
 
-    def prepare_series(self):
-        pass
-        # self.training_encoder = self.df.iloc[:,np.concatenate([np.arange(self.fixed_columns), self.date_to_index[self.train_enc_start:self.train_enc_end].values])]
-        # self.training_decoder = self.df.iloc[:,np.concatenate([np.arange(self.fixed_columns), self.date_to_index[self.train_pred_start:self.train_pred_end].values])]
-        # self.validation_encoder = self.df.iloc[:,np.concatenate([np.arange(self.fixed_columns), self.date_to_index[self.val_enc_start:self.val_enc_end].values])]
-        # self.validation_decoder = self.df.iloc[:,np.concatenate([np.arange(self.fixed_columns), self.date_to_index[self.val_pred_start:self.val_pred_end].values])]
+    def training_series(self):
+        training_encoder = self.df[self.df['date'] >= self.train_enc_start][self.df['date'] <= self.train_enc_end]
+        training_decoder = self.df[self.df['date'] >= self.train_pred_start][self.df['date'] <= self.train_pred_end]
+        return training_encoder, training_decoder
+
+    def validation_series(self):
+        validation_encoder = self.df[self.df['date'] >= self.val_enc_start][self.df['date'] <= self.val_enc_end]
+        validation_decoder = self.df[self.df['date'] >= self.val_pred_start][self.df['date'] <= self.val_pred_end]
+        return validation_encoder, validation_decoder

@@ -25,6 +25,9 @@ class WikiSeries:
     def get_validation_sample(self, sample_ind):
         pass
 
+    def get_sample(self, page_name, lang, access, agent, encoding_start=None, encoding_end=None, decoding_start=None, decoding_end=None):
+        pass
+
     def denormalize_series(self, series, sample_ind):
         pass
 
@@ -58,7 +61,8 @@ class WikiSeries:
         self.prepare_series()
 
     def prepare_series(self):
-        pass
+        self.training_encoder, self.training_decoder = self.training_series()
+        self.validation_encoder, self.validation_decoder = self.validation_series()
 
     @staticmethod
     def preprocess_csv_to_pickle(input_path, output_path):

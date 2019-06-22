@@ -26,9 +26,10 @@ class WikiSeriesNN(WikiSeries):
         inds = self.date_to_index[start_date:end_date]
         return self.series_array[:, inds]
 
-    def transform_series_encode(self, series):
+    def transform_series_encode(self, series, compute_mean=True):
         series_array = np.log1p(series)
-        self.encode_series_mean = series_array.mean(axis=1).reshape(-1, 1)
+        if compute_mean:
+            self.encode_series_mean = series_array.mean(axis=1).reshape(-1, 1)
         series_array = series_array - self.encode_series_mean
         series_array = series_array.reshape((series_array.shape[0], series_array.shape[1], 1))
 
@@ -59,15 +60,31 @@ class WikiSeriesNN(WikiSeries):
 
         return encoder_input_data, decoder_target_data
 
-    # TODO should be able to get any sample, transformed correctly, not only validation directly from df, given start history, start target and end target dates
     def get_validation_sample(self, sample_ind):
         return self.validation_encoder[sample_ind:sample_ind + 1, :, :], self.validation_decoder[sample_ind, :, :1].reshape(-1, 1)
+
+    def get_sample(self, index=None, page_name=None, lang=None, access=None, agent=None, encoding_start=None, encoding_end_decoding_start=None,
+                   decoding_end=None):
+        if index is None:
+            if page_name is None or lang is None or access is None or agent is None:
+                return None
+            index = self.meta[self.meta['name'] == page_name][self.meta['lang'] == lang][self.meta['access'] == access][self.meta['agent'] == agent]
+            if len(index.index) == 0:
+                return None
+            index = index.index[0]
+
+        if encoding_start is None or encoding_end_decoding_start is None or decoding_end is None:
+            return self.meta.iloc[index, :], self.df.iloc[index, :]
+
+        encode_series = self.get_time_block_series(encoding_start, encoding_end_decoding_start)
+        decode_series = self.get_time_block_series(encoding_end_decoding_start, decoding_end)[:, 1:]
+
+        encode_series = self.transform_series_encode(encode_series, compute_mean=False)
+        decode_series = self.transform_series_decode(decode_series)
+
+        return self.meta.iloc[index, :], encode_series[index: index + 1, :], decode_series[index:index + 1, :]
 
     def denormalize_series(self, series, sample_ind):
         new_series = series + self.encode_series_mean[sample_ind, 0]
         new_series = np.expm1(new_series)
         return new_series
-
-    def prepare_series(self):
-        self.training_encoder, self.training_decoder = self.training_series()
-        self.validation_encoder, self.validation_decoder = self.validation_series()
