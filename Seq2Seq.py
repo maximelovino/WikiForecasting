@@ -48,9 +48,8 @@ class Seq2Seq(WikiModel):
         # `encoder_input_data` & `decoder_input_data` into `decoder_target_data`
         self.model = Model([self.encoder_inputs, self.decoder_inputs], decoder_outputs)
 
-    def fit(self, epochs=10):
+    def fit(self, epochs=10, batch_size=2 ** 11):
         first_n_samples = 20000
-        batch_size = 2 ** 11
 
         encoder_input_data = self.series.training_encoder
         decoder_target_data = self.series.training_decoder

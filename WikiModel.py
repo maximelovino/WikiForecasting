@@ -12,7 +12,7 @@ class WikiModel:
         if summary:
             self.model.summary()
 
-    def fit(self, epochs=10):
+    def fit(self, epochs=10, batch_size=2 ** 11):
         pass
 
     def build_model(self):

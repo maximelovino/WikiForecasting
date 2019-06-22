@@ -21,11 +21,10 @@ class WikiSeries:
     def validation_series(self):
         pass
 
-    # TODO should be able to get any sample, transformed correctly, not only validation
     def get_validation_sample(self, sample_ind):
         pass
 
-    def get_sample(self, page_name, lang, access, agent, encoding_start=None, encoding_end=None, decoding_start=None, decoding_end=None):
+    def get_sample(self, index=None, page_name=None, lang=None, access=None, agent=None):
         pass
 
     def denormalize_series(self, series, sample_ind):

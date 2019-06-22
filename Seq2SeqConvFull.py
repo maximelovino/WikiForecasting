@@ -1,14 +1,14 @@
 import numpy as np
-from keras.layers import Input, Conv1D, Dense, Dropout, Lambda
 from keras.models import Model
-from keras.models import load_model
+from keras.layers import Input, Conv1D, Dense, Activation, Dropout, Lambda, Multiply, Add, Concatenate
 from keras.optimizers import Adam
+from keras.models import load_model
 
 from WikiModel import WikiModel
 from WikiSeries import WikiSeries
 
 
-class Seq2SeqConv(WikiModel):
+class Seq2SeqConvFull(WikiModel):
     def __init__(self, series: WikiSeries, pred_steps) -> None:
         super().__init__(series, pred_steps)
 
@@ -17,31 +17,61 @@ class Seq2SeqConv(WikiModel):
         n_filters = 32
         filter_width = 2
         power_2 = 11
-        dilation_rates = [2 ** i for i in range(power_2)]
+        dilation_rates = [2 ** i for i in range(power_2)] * 2
 
         # define an input history series and pass it through a stack of dilated causal convolutions.
         history_seq = Input(shape=(None, 1))
         x = history_seq
 
+        skips = []
         for dilation_rate in dilation_rates:
-            x = Conv1D(filters=n_filters,
-                       kernel_size=filter_width,
-                       padding='causal',
-                       dilation_rate=dilation_rate)(x)
+            # preprocessing - equivalent to time-distributed dense
+            x = Conv1D(16, 1, padding='same', activation='relu')(x)
 
-        x = Dense(128, activation='relu')(x)
-        x = Dropout(.2)(x)
-        x = Dense(1)(x)
+            # filter convolution
+            x_f = Conv1D(filters=n_filters,
+                         kernel_size=filter_width,
+                         padding='causal',
+                         dilation_rate=dilation_rate)(x)
 
-        # extract the last pred_steps time steps as the training target
+            # gating convolution
+            x_g = Conv1D(filters=n_filters,
+                         kernel_size=filter_width,
+                         padding='causal',
+                         dilation_rate=dilation_rate)(x)
+
+            # multiply filter and gating branches
+            z = Multiply()([Activation('tanh')(x_f),
+                            Activation('sigmoid')(x_g)])
+
+            # postprocessing - equivalent to time-distributed dense
+            z = Conv1D(16, 1, padding='same', activation='relu')(z)
+
+            # residual connection
+            x = Add()([x, z])
+
+            # collect skip connections
+            skips.append(z)
+
+        # add all skip connection outputs
+        out = Activation('relu')(Add()(skips))
+
+        # final time-distributed dense layers
+        out = Conv1D(2 ** (power_2 - 1), 1, padding='same')(out)
+        out = Activation('relu')(out)
+        out = Dropout(.2)(out)
+        out = Conv1D(1, 1, padding='same')(out)
+
+        # extract the last 60 time steps as the training target
         def slice(x, seq_length):
             return x[:, -seq_length:, :]
 
-        pred_seq_train = Lambda(slice, arguments={'seq_length': self.pred_steps})(x)
+        pred_seq_train = Lambda(slice, arguments={'seq_length': 60})(out)
 
         self.model = Model(history_seq, pred_seq_train)
+        self.model.compile(Adam(), loss='mean_absolute_error')
 
-    def fit(self, epochs=10, batch_size = 2 ** 11):
+    def fit(self, epochs=10, batch_size=2 ** 11):
         first_n_samples = 40000
 
         encoder_input_data = self.series.training_encoder

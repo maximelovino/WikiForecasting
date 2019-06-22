@@ -63,26 +63,18 @@ class WikiSeriesNN(WikiSeries):
     def get_validation_sample(self, sample_ind):
         return self.validation_encoder[sample_ind:sample_ind + 1, :, :], self.validation_decoder[sample_ind, :, :1].reshape(-1, 1)
 
-    def get_sample(self, index=None, page_name=None, lang=None, access=None, agent=None, encoding_start=None, encoding_end_decoding_start=None,
-                   decoding_end=None):
+    def get_sample(self, index=None, page_name=None, lang=None, access=None, agent=None):
         if index is None:
             if page_name is None or lang is None or access is None or agent is None:
                 return None
             index = self.meta[self.meta['name'] == page_name][self.meta['lang'] == lang][self.meta['access'] == access][self.meta['agent'] == agent]
+            print(index)
             if len(index.index) == 0:
                 return None
             index = index.index[0]
 
-        if encoding_start is None or encoding_end_decoding_start is None or decoding_end is None:
-            return self.meta.iloc[index, :], self.df.iloc[index, :]
-
-        encode_series = self.get_time_block_series(encoding_start, encoding_end_decoding_start)
-        decode_series = self.get_time_block_series(encoding_end_decoding_start, decoding_end)[:, 1:]
-
-        encode_series = self.transform_series_encode(encode_series, compute_mean=False)
-        decode_series = self.transform_series_decode(decode_series)
-
-        return self.meta.iloc[index, :], encode_series[index: index + 1, :], decode_series[index:index + 1, :]
+        encode, decode = self.get_validation_sample(index)
+        return index, self.meta.iloc[index, :], encode, decode
 
     def denormalize_series(self, series, sample_ind):
         new_series = series + self.encode_series_mean[sample_ind, 0]
