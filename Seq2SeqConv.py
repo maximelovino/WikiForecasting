@@ -13,13 +13,11 @@ class Seq2SeqConv(WikiModel):
         super().__init__(series, pred_steps)
 
     def build_model(self):
-        # convolutional layer parameters
         n_filters = 32
         filter_width = 2
         power_2 = 11
         dilation_rates = [2 ** i for i in range(power_2)]
 
-        # define an input history series and pass it through a stack of dilated causal convolutions.
         history_seq = Input(shape=(None, 1))
         x = history_seq
 
@@ -33,7 +31,6 @@ class Seq2SeqConv(WikiModel):
         x = Dropout(.2)(x)
         x = Dense(1)(x)
 
-        # extract the last pred_steps time steps as the training target
         def slice(x, seq_length):
             return x[:, -seq_length:, :]
 
@@ -50,8 +47,6 @@ class Seq2SeqConv(WikiModel):
         encoder_input_data = encoder_input_data[:first_n_samples]
         decoder_target_data = decoder_target_data[:first_n_samples]
 
-        # we append a lagged history of the target series to the input data,
-        # so that we can train with teacher forcing
         lagged_target_history = decoder_target_data[:, :-1, :1]
         encoder_input_data = np.concatenate([encoder_input_data, lagged_target_history], axis=1)
 
@@ -66,18 +61,15 @@ class Seq2SeqConv(WikiModel):
 
     def predict(self, input_seq, target, feed_truth):
         history_sequence = input_seq.copy()
-        pred_sequence = np.zeros((1, self.pred_steps, 1))  # initialize output (pred_steps time steps)
+        pred_sequence = np.zeros((1, self.pred_steps, 1))
 
         for i in range(self.pred_steps):
-
-            # record next time step prediction (last time step of model output)
             last_step_pred = self.model.predict(history_sequence)[0, -1, 0]
             pred_sequence[0, i, 0] = last_step_pred
 
             if feed_truth:
                 last_step_pred = target[i][0]
 
-            # add the next time step prediction to the history sequence
             history_sequence = np.concatenate([history_sequence,
                                                last_step_pred.reshape(-1, 1, 1)], axis=1)
 

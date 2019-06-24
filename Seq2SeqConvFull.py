@@ -13,56 +13,38 @@ class Seq2SeqConvFull(WikiModel):
         super().__init__(series, pred_steps)
 
     def build_model(self):
-        # convolutional layer parameters
         n_filters = 32
         filter_width = 2
         power_2 = 11
         dilation_rates = [2 ** i for i in range(power_2)] * 2
 
-        # define an input history series and pass it through a stack of dilated causal convolutions.
         history_seq = Input(shape=(None, 1))
         x = history_seq
 
         skips = []
         for dilation_rate in dilation_rates:
-            # preprocessing - equivalent to time-distributed dense
             x = Conv1D(16, 1, padding='same', activation='relu')(x)
-
-            # filter convolution
             x_f = Conv1D(filters=n_filters,
                          kernel_size=filter_width,
                          padding='causal',
                          dilation_rate=dilation_rate)(x)
-
-            # gating convolution
             x_g = Conv1D(filters=n_filters,
                          kernel_size=filter_width,
                          padding='causal',
                          dilation_rate=dilation_rate)(x)
-
-            # multiply filter and gating branches
             z = Multiply()([Activation('tanh')(x_f),
                             Activation('sigmoid')(x_g)])
-
-            # postprocessing - equivalent to time-distributed dense
             z = Conv1D(16, 1, padding='same', activation='relu')(z)
-
-            # residual connection
             x = Add()([x, z])
-
-            # collect skip connections
             skips.append(z)
 
-        # add all skip connection outputs
         out = Activation('relu')(Add()(skips))
 
-        # final time-distributed dense layers
         out = Conv1D(2 ** (power_2 - 1), 1, padding='same')(out)
         out = Activation('relu')(out)
         out = Dropout(.2)(out)
         out = Conv1D(1, 1, padding='same')(out)
 
-        # extract the last 60 time steps as the training target
         def slice(x, seq_length):
             return x[:, -seq_length:, :]
 
@@ -80,8 +62,6 @@ class Seq2SeqConvFull(WikiModel):
         encoder_input_data = encoder_input_data[:first_n_samples]
         decoder_target_data = decoder_target_data[:first_n_samples]
 
-        # we append a lagged history of the target series to the input data,
-        # so that we can train with teacher forcing
         lagged_target_history = decoder_target_data[:, :-1, :1]
         encoder_input_data = np.concatenate([encoder_input_data, lagged_target_history], axis=1)
 
@@ -96,18 +76,15 @@ class Seq2SeqConvFull(WikiModel):
 
     def predict(self, input_seq, target, feed_truth):
         history_sequence = input_seq.copy()
-        pred_sequence = np.zeros((1, self.pred_steps, 1))  # initialize output (pred_steps time steps)
+        pred_sequence = np.zeros((1, self.pred_steps, 1))
 
         for i in range(self.pred_steps):
-
-            # record next time step prediction (last time step of model output)
             last_step_pred = self.model.predict(history_sequence)[0, -1, 0]
             pred_sequence[0, i, 0] = last_step_pred
 
             if feed_truth:
                 last_step_pred = target[i][0]
 
-            # add the next time step prediction to the history sequence
             history_sequence = np.concatenate([history_sequence,
                                                last_step_pred.reshape(-1, 1, 1)], axis=1)
 

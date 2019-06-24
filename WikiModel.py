@@ -55,21 +55,18 @@ class WikiModel:
 
     def predictBatch(self, input_seq, target, feed_truth, batch=2**10):
         history_sequence = input_seq.copy()
-        pred_sequence = np.zeros((history_sequence.shape[0], self.pred_steps, 1))  # initialize output (pred_steps time steps)
+        pred_sequence = np.zeros((history_sequence.shape[0], self.pred_steps, 1))
         print(target.shape)
         print(input_seq.shape)
         
 
         for i in range(self.pred_steps):
-
-            # record next time step prediction (last time step of model output)
             last_step_pred = self.model.predict(history_sequence,batch_size=batch)[:, -1, 0]
             pred_sequence[:, i, 0] = last_step_pred
             
             if feed_truth:
                 last_step_pred = target[i,:]
                 
-            # add the next time step prediction to the history sequence
             history_sequence = np.concatenate([history_sequence,
                                                last_step_pred.reshape(-1, 1, 1)], axis=1)
 
