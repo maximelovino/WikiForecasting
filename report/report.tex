@@ -55,9 +55,25 @@
         \includegraphics[width=.7\textwidth]{walkforward.png}
         \caption{Walk forward validation}
     \end{figure}
+    \subsection{Data normalisation}
+    We normalise data using \verb+log1p+, that is $log(x+1)$ as well as removing the mean of the series from all page normalised page views. After predicting, we do the inverse transformation before displaying results and computing metrics.
 
     \subsection{Seq2Seq models}
+    The idea behind Seq2Seq is that we have an encoder and a decoder. This model was created by Google for translating text. The foreign language text would be fed as the encoder with the list of words in the foreign language and then fed to the decoder with translated words chained in the decoder. In our context, the encoder is the historical time series data on which we are training the model and the decoder is the predicted data for the future. Seq2Seq models are based on LSTM\footnote{Long short term memory} layers that will surface old information at a later stage in order to not only fit on the most recent information in the encoder. We use teacher forcing during training by putting the decoder target in the encoder as well so that the fitting of the model can use the target value to find the next one and compare to the expected decoder.
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=.6\textwidth]{seq2seq.png}
+        \caption{Seq2Seq models}
+    \end{figure}
     \subsection{WaveNet}
+    WaveNet is another model developed by DeepMind\footnote{DeepMind is actually Google}, this time for text-to-speech application. The idea here is that we will use convolutional layers to combine inputs from different encoder steps. In our case, we use causal dilational convolutions, so that in each hidden layer, we combine further apart steps (exponentially up to $log_2(days)$ distance between steps) in a causal manner, meaning that we only combine forward and not backward. This in the end leads to the output being a combination of values from 2, 4, 8, 16,... days before. The main difference in our implementation is that we use a \verb+ReLu+ activation instead of a \verb+SoftMax+ as we want to predict a continuous value and not a categorical one.\\
+
+Our full WaveNet model has 2 * 10 convolutional layers (increasing then decreasing step sizes) multiplied together with \verb+tanh+ and \verb+sigmoid+ activations (gated activation) with residual and skip connections.
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=.6\textwidth]{wavenet.jpg}
+        \caption{WaveNet causal dilation}
+    \end{figure}
     \newpage
     \section{Experiments and results}
     \subsection{Training in the cloud}
@@ -85,6 +101,13 @@
     \end{figure}
     \newpage
     \section{Analysis and conclusions}
+We really enjoyed working on this project as it allowed us to learn a lot about time series and deep learning models, in particular Seq2Seq and WaveNet. We discovered a lot of concepts such as teacher forcing, walk forward validation that we didn't really see in class as we didn't have a full chapter on time series or specific deep learning models. It would have been easier if we had seen Seq2Seq models or even LSTM before in class. \\
+
+    As always with deep learning, we actually used existing models that we adapted to our problem, but we still managed to understand how they worked and grasp the concepts behind them. For the kinds of problems we handled in this project, we can't really avoid using deep learning models as they provide the best results and they take advantages of GPUs to be trained in reasonable time. Also, we often don't need to extract a lot of features, often categorical, as it is often the case with classic models. This feature extraction can often take even more time than the training itself and in our case led to explosion of memory and CPU usages without providing good results.\\
+
+    As far as the obtained results are concerned, we actually managed to beat the competition winner, although we removed problematic series in our case, which left us really impressed with the power of the relatively simple to code model we created. By using Keras, we can build a complex models in really few lines of code.\\
+
+    For the scope of the project, the most useful predictions though would be the one day predictions in our opinion as most sites are hosted on cloud infrastructures and predicting one traffic one day in advance would already provide enough time to scale infrastructure proactively instead of reactively thus providing a better experience for site users.\\
 
 
 \end{document}
