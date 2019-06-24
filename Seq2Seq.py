@@ -118,6 +118,9 @@ class Seq2Seq(WikiModel):
 
         return decoded_seq
 
+    def predictBatch(self, input_seq, target, feed_truth, batch=2**10):
+        pass
+    
     def save_model(self, path):
         try:
             if not os.path.isdir(path):

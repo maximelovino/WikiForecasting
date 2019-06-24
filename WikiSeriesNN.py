@@ -80,3 +80,5 @@ class WikiSeriesNN(WikiSeries):
         new_series = series + self.encode_series_mean[sample_ind, 0]
         new_series = np.expm1(new_series)
         return new_series
+
+    

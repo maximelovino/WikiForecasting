@@ -1,5 +1,6 @@
 from WikiSeries import WikiSeries
 from matplotlib import pyplot as plt
+import numpy as np
 
 
 class WikiModel:
@@ -37,9 +38,44 @@ class WikiModel:
 
         return encode, target, prediction
 
+    
+    def normalise_reshape_prediction_batches(self, encode_all, target_all, prediction_all, samples_indexes):
+        encode = encode_all[:,:,0].T
+        prediction = prediction_all[:,:,0].T
+
+        prediction = self.series.denormalize_series(prediction, samples_indexes)
+        encode = self.series.denormalize_series(encode, samples_indexes)
+        target = self.series.denormalize_series(target_all, samples_indexes)
+
+        return encode, target, prediction
+        
+        
     def predict(self, input_seq, target, feed_truth):
         pass
 
+    def predictBatch(self, input_seq, target, feed_truth, batch=2**10):
+        history_sequence = input_seq.copy()
+        pred_sequence = np.zeros((history_sequence.shape[0], self.pred_steps, 1))  # initialize output (pred_steps time steps)
+        print(target.shape)
+        print(input_seq.shape)
+        
+
+        for i in range(self.pred_steps):
+
+            # record next time step prediction (last time step of model output)
+            last_step_pred = self.model.predict(history_sequence,batch_size=batch)[:, -1, 0]
+            pred_sequence[:, i, 0] = last_step_pred
+            
+            if feed_truth:
+                last_step_pred = target[i,:]
+                
+            # add the next time step prediction to the history sequence
+            history_sequence = np.concatenate([history_sequence,
+                                               last_step_pred.reshape(-1, 1, 1)], axis=1)
+
+        return pred_sequence
+    
+    
     def save_model(self, path):
         pass
 
