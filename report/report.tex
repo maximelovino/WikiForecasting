@@ -17,6 +17,8 @@
 \usepackage{url}
 \usepackage{graphicx}
 \usepackage{float}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
 \title{Wikipedia Web Traffic Forecasting\\Machine Learning on Big Data - HES-SO Master}
 \author{Maxime Alexandre Lovino \and Marco Rodrigues Lopes}
 
@@ -28,7 +30,9 @@
 
     Time series are used in multiple domains, the most well known being the stock market values, so we could apply the same type of models to predict stock market changes and become rich....But in practice it would actually be more efficient to use external factors such as trending topics or news articles to find correlations with the changes in the time series.\\
 
-    In this project, we didn't have only one time series to predict but actually a lot of them. 145000 different time series were provided spanning 2.5 years with a granularity of 1 day. The goal of the project is to predict the values for each of them for 60 days in the future. For this project, we didn't use external data to help us with the predictions and relied solely on the time series themselves to predict future values.
+    In this project, we didn't have only one time series to predict but actually a lot of them. 145000 different time series were provided spanning 2.5 years with a granularity of 1 day. The goal of the project is to predict the values for each of them for 60 days in the future. For this project, we didn't use external data to help us with the predictions and relied solely on the time series themselves to predict future values.\\
+
+    In order to respect the maximum number of pages specified for this report, we will only discuss models, techniques and results from our best model(s) and will discuss discarded ones shortly during the oral presentation.
     \newpage
     \section{Data description}
     The dataset that can be downloaded on Kaggle consists of two training files in the CSV format and other files which are not relevant to our problem as they're only used for actually submitting an answer for the competition. The two training files consists of the same set of 145000 pages and the same starting date but the second one:\verb+train_2.csv+ is longer, spanning almost 803 days. We decided to use the longer for our experiment has it contains at least two complete years of data. The CSV file weighs 400 MB uncompressed.\\
@@ -44,31 +48,41 @@
     The preprocessing and cleaning of the CSV file is handled in the \verb+preprocess_csv_to_pickle+ static method of the \verb+WikiSeries+ classes we have created. This will take a CSV file as an input, extract the information contained in the first column to split in 4 columns (title, lang, access, agent) and remove any page which doesn't belong to a specific country Wikipedia subdomain\footnote{Wikimedia for example}. We will also remove all pages containing \verb+NaN+ values in their series as we can't really replace them with 0 because they didn't actually get 0 views as they didn't exist so we removed them to only work with clean data. After all these steps, we save the resulting Dataframe as a Pickle which will then be used by our other programs. With this cleaning, we reduced our number of pages from 145’063 pages down to 106'328 pages.
     \newpage
     \section{Machine Learning techniques used}
-    \subsection{Clustering time series}
-    Even with around 100'000 pages down from 145'000 pages, we were still looking for ways to reduce the complexity of the models needed for the datasets so we decided to explore the idea of clustering time series together according to their normalised shapes. In order to do this, we first normalised all time series using min-max scaling for each of them so they had values between 0 and 1. Then we wanted to use Dynamic Time Warping in order to compute a distance between series with small shifts and deformation. The problem is that Dynamic Time Warping computation is complex and it wasn't possible to do it with all pairs from our 100'000 pages.\\
-
-    We selected 1\% of the pages by using stratification from buckets of standard deviation we computed in order to have different types of pages represented in our sampling. We computed DTW distances between pairs of those pages and ran agglomaterive clustering on them. Then we matched all remaining patches to the closest page from the sampling according to the default KNN distance metric.\\
-
-    The resulting clusters were not good enough and not balanced at all, so we abandoned the idea of clustering our series.
-    %%\subsection{Light Gradient Boosted Regressor and feature extraction}
-    %%TODO if we have space
-    \subsection{Deep Learning}
-    \subsubsection{Walk forward validation}
+    \subsection{Walk forward validation}
     Before training our models, we had to decide how we wanted to split our data. Splitting by pages doesn't make a lot of sense for time series so instead we decided to use Walk Forward validation so that we evaluate the same pages but for a different 60-days windows when evaluating our models. When specifically fitting the model though, we took 40'000 pages and dedicated 20\% for Keras validation so we used a side by side split to fit the model.
     \begin{figure}[H]
         \centering
-        \includegraphics[width=\textwidth]{walkforward.png}
+        \includegraphics[width=.7\textwidth]{walkforward.png}
         \caption{Walk forward validation}
     \end{figure}
 
-    \subsubsection{Seq2Seq models}
-    \subsubsection{WaveNet}
+    \subsection{Seq2Seq models}
+    \subsection{WaveNet}
     \newpage
     \section{Experiments and results}
     \subsection{Training in the cloud}
+    We had to use cloud infrastructures, such as Google Cloud and Amazon AWS in order to train our models on big GPUs in a reasonable time. We mainly used Tesla K80 cards on Google Cloud as well as some Tesla V100 cards from Nvidia. Our more complex model, the full WaveNet with the most layers, skips and residuals took 2 minutes per epoch to train.\\
+
+    Evaluating prediction for all 100'000 time series took a long time as well, we did it in batches but it still took more or less 20 minutes on those same GPUs for the most complex model.
     \subsection{Evaluating results with SMAPE}
+    The metric we used to evaluate our results was the SMAPE\footnote{Symmetric Mean Absolute Percentage Error} which was used in the Kaggle competition. The SMAPE provides a relative error so that errors in pages with a high number of views won't influence our results more than errors on small pages. The formula used to compute the SMAPE is the following\footnote{This gives directly the percentage value, so a result of 35 means a 35\% SMAPE value}:
+    \begin{equation*}
+        \frac{100\%}{days} * \sum_{t=0}^{t=days}\frac{2 * |\hat{y}_t-y_t|}{|y_t| + |\hat{y}_t|}
+    \end{equation*}
     \subsection{Results for single day predictions}
+    We evaluated at first for single day prediction, that means that for each day $t$, we inserted the target $y_{t-1}$ as last step for the prediction. With this we obtained SMAPE values of 24.885\% for the simple WaveNet and 23.708\% for the full one.
     \subsection{Results for 60 days prediction}
+    Then we evaluated for the full 60 days, that means that for each day $t$, we inserted the prediction $\hat{y}_{t-1}$ as last step for the prediction. With this we obtained SMAPE values of 37.2910\% for the simple WaveNet and 34.6499\% for the full one. This last result is impressive as it is better than the result from the winner of the competition. However, the results were not computed on the same period as the period used for computing results has never been published and also our result has only been computed on pages containing non \verb+NaN+ values.
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\textwidth]{prediction_single.png}
+        \caption{Single day prediction for Wikipedia EN Main page}
+    \end{figure}
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\textwidth]{prediction.png}
+        \caption{60 days prediction for Wikipedia EN Main page}
+    \end{figure}
     \newpage
     \section{Analysis and conclusions}
 
