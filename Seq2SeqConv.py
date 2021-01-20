@@ -60,6 +60,12 @@ class Seq2SeqConv(WikiModel):
                                       validation_split=0.2)
 
     def predict(self, input_seq, target, feed_truth):
+        """
+        :param input_seq: history sequence
+        :param target: array containing truth, only useful if feed_truth is set to True
+        :param feed_truth: replace predicted value by truth for next prediction
+        :return:
+        """
         history_sequence = input_seq.copy()
         pred_sequence = np.zeros((1, self.pred_steps, 1))
 
